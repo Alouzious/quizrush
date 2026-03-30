@@ -32,8 +32,11 @@ async fn main() -> anyhow::Result<()> {
     let rooms = game::new_room_store();
 
     let frontend_url = config.frontend_url.clone();
+    let cors_origin = frontend_url
+        .parse::<axum::http::HeaderValue>()
+        .map_err(|e| anyhow::anyhow!("Invalid FRONTEND_URL: {}", e))?;
     let cors = CorsLayer::new()
-        .allow_origin(frontend_url.parse::<axum::http::HeaderValue>().unwrap())
+        .allow_origin(cors_origin)
         .allow_methods(Any)
         .allow_headers(Any);
 
