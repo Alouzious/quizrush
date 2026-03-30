@@ -6,6 +6,7 @@ export function useWebSocket(onMessage) {
   const wsRef = useRef(null)
   const reconnectRef = useRef(null)
   const mountedRef = useRef(true)
+  const reconnectAttemptsRef = useRef(0)
   const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage
 
@@ -17,6 +18,7 @@ export function useWebSocket(onMessage) {
 
     ws.onopen = () => {
       console.log('[WS] Connected')
+      reconnectAttemptsRef.current = 0
       clearTimeout(reconnectRef.current)
     }
 
@@ -32,7 +34,9 @@ export function useWebSocket(onMessage) {
     ws.onclose = () => {
       console.log('[WS] Disconnected')
       if (mountedRef.current) {
-        reconnectRef.current = setTimeout(() => connect(), 3000)
+        const delay = Math.min(1000 * 2 ** reconnectAttemptsRef.current, 30000)
+        reconnectAttemptsRef.current += 1
+        reconnectRef.current = setTimeout(() => connect(), delay)
       }
     }
 

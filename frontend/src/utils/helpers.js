@@ -18,9 +18,17 @@ export function getRankEmoji(rank) {
   return `#${rank}`
 }
 
+function escapeCsvValue(value) {
+  const str = String(value ?? '')
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`
+  }
+  return str
+}
+
 export function exportToCsv(data, filename) {
-  const headers = Object.keys(data[0]).join(',')
-  const rows = data.map(row => Object.values(row).join(',')).join('\n')
+  const headers = Object.keys(data[0]).map(escapeCsvValue).join(',')
+  const rows = data.map(row => Object.values(row).map(escapeCsvValue).join(',')).join('\n')
   const csv = `${headers}\n${rows}`
   const blob = new Blob([csv], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
