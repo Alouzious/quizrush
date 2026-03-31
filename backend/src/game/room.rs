@@ -24,7 +24,8 @@ pub struct GameRoom {
     pub current_question_index: usize,
     pub question_start_time: Option<i64>,
     pub host_sender: Option<mpsc::UnboundedSender<Message>>,
-    pub answers_received: HashMap<Uuid, bool>,
+    pub answers_received: HashMap<Uuid, bool>,       // player_id -> is_correct
+    pub answer_counts: HashMap<Uuid, u32>,           // answer_id -> count
 }
 
 impl GameRoom {
@@ -41,11 +42,18 @@ impl GameRoom {
             question_start_time: None,
             host_sender: None,
             answers_received: HashMap::new(),
+            answer_counts: HashMap::new(),
         }
     }
 
     pub fn add_player(&mut self, player: Player) {
-        self.players.insert(player.id, player);
+        if let Some(existing) = self.players.get_mut(&player.id) {
+            existing.sender = player.sender;
+            existing.is_connected = true;
+            existing.nickname = player.nickname;
+        } else {
+            self.players.insert(player.id, player);
+        }
     }
 
     pub fn remove_player(&mut self, player_id: &Uuid) {
@@ -53,6 +61,11 @@ impl GameRoom {
             player.is_connected = false;
             player.sender = None;
         }
+    }
+
+    pub fn record_answer(&mut self, player_id: Uuid, answer_id: Uuid, is_correct: bool) {
+        self.answers_received.insert(player_id, is_correct);
+        *self.answer_counts.entry(answer_id).or_insert(0) += 1;
     }
 
     pub fn get_player_summaries(&self) -> Vec<PlayerSummary> {

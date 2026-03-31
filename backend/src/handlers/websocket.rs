@@ -204,6 +204,7 @@ async fn handle_socket(socket: WebSocket, pool: PgPool, rooms: RoomStore) {
                                     room.status = crate::game::room::RoomStatus::Active;
                                     room.question_start_time = Some(current_timestamp_ms());
                                     room.answers_received.clear();
+                                    room.answer_counts.clear();
                                 }
 
                                 sqlx::query("UPDATE game_rooms SET status = 'active', started_at = $1 WHERE room_code = $2")
@@ -277,7 +278,6 @@ async fn handle_socket(socket: WebSocket, pool: PgPool, rooms: RoomStore) {
 
                         let mut points_earned = 0i32;
                         let mut response_time_ms_val = 0i64;
-                        let mut all_answered = false;
 
                         if let Some(mut room) = rooms.get_mut(rc) {
                             let start_time = room.question_start_time.unwrap_or_else(|| current_timestamp_ms());
@@ -293,8 +293,11 @@ async fn handle_socket(socket: WebSocket, pool: PgPool, rooms: RoomStore) {
                             if let Some(player) = room.players.get_mut(pid) {
                                 player.score += points_earned;
                             }
-                            room.answers_received.insert(*pid, is_correct);
 
+                            // Record answer with real answer_id for counting
+                            room.record_answer(*pid, auid, is_correct);
+
+                            // Send result back to player
                             let result_msg = json!({
                                 "event": "answer_received",
                                 "data": {
@@ -307,23 +310,31 @@ async fn handle_socket(socket: WebSocket, pool: PgPool, rooms: RoomStore) {
                                 player.send(Message::Text(result_msg.into()));
                             }
 
-                            all_answered = room.all_answered();
+                            // Send live stats to host after EVERY answer
+                            let stats: Vec<Value> = room.questions.get(room.current_question_index)
+                                .map(|q| {
+                                    q.answers.iter().map(|a| {
+                                        let count = room.answer_counts.get(&a.id).copied().unwrap_or(0);
+                                        json!({
+                                            "answer_id": a.id,
+                                            "text": a.text,
+                                            "count": count,
+                                            "is_correct": a.is_correct
+                                        })
+                                    }).collect()
+                                })
+                                .unwrap_or_default();
 
-                            if all_answered {
-                                let stats: Vec<Value> = room.questions.get(room.current_question_index)
-                                    .map(|q| {
-                                        q.answers.iter().map(|a| {
-                                            json!({"answer_id": a.id, "text": a.text, "count": 0, "is_correct": a.is_correct})
-                                        }).collect()
-                                    })
-                                    .unwrap_or_default();
-
-                                let stats_msg = json!({
-                                    "event": "answer_stats",
-                                    "data": { "stats": stats, "question_id": question_id }
-                                }).to_string();
-                                room.send_to_host(&stats_msg);
-                            }
+                            let answered_count = room.answers_received.len();
+                            let stats_msg = json!({
+                                "event": "answer_stats",
+                                "data": {
+                                    "stats": stats,
+                                    "question_id": question_id,
+                                    "answered_count": answered_count
+                                }
+                            }).to_string();
+                            room.send_to_host(&stats_msg);
                         }
 
                         sqlx::query(
@@ -406,6 +417,7 @@ async fn handle_socket(socket: WebSocket, pool: PgPool, rooms: RoomStore) {
                                 room.current_question_index = next_idx;
                                 room.question_start_time = Some(current_timestamp_ms());
                                 room.answers_received.clear();
+                                room.answer_counts.clear();
                             }
 
                             let question_json = build_question_json(&q, false);

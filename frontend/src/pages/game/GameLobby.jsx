@@ -1,34 +1,22 @@
 import { useEffect, useCallback, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { motion } from 'framer-motion'
-import QRCode from 'react-qr-code'
-import { Users, Copy, Play, Zap } from 'lucide-react'
-import Button from '../../components/Button'
+import { motion, AnimatePresence } from 'framer-motion'
+import { QRCodeSVG } from 'react-qr-code'
 import { useWebSocket } from '../../hooks/useWebSocket'
 import { useAuthStore } from '../../store/authStore'
-import { generateAvatar } from '../../utils/helpers'
-import { staggerContainer, staggerItem } from '../../animations/variants'
+import PlayerAvatar from '../../components/PlayerAvatar'
 
 export default function GameLobby() {
   const { roomCode } = useParams()
   const navigate = useNavigate()
   const { token } = useAuthStore()
   const [players, setPlayers] = useState([])
-  const [copied, setCopied] = useState(false)
-  const joinUrl = `${window.location.origin}/join/${roomCode}`
+  const joinUrl = `${window.location.origin}/join`
 
   const handleMessage = useCallback((msg) => {
-    switch (msg.event) {
-      case 'room_info':
-        setPlayers(msg.data.players || [])
-        break
-      case 'player_joined':
-        setPlayers(msg.data.players || [])
-        break
-      case 'player_left':
-        setPlayers(msg.data.players || [])
-        break
+    if (['room_info', 'player_joined', 'player_left'].includes(msg.event)) {
+      setPlayers(msg.data.players || [])
     }
   }, [])
 
@@ -43,77 +31,128 @@ export default function GameLobby() {
     navigate(`/host/game/${roomCode}`)
   }
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(roomCode)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   return (
     <>
       <Helmet><title>Game Lobby — QuizRush</title></Helmet>
-      <div className="min-h-screen bg-gradient-to-br from-[#2563EB] to-blue-800 p-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <Zap size={28} className="text-white" />
-            <h1 className="text-2xl font-extrabold text-white">Game Lobby</h1>
+      <div
+        className="min-h-screen relative overflow-hidden flex flex-col"
+        style={{ background: 'linear-gradient(180deg, #1a0a2e 0%, #3d1a6e 40%, #6b3fa0 80%, #8b5fbf 100%)' }}
+      >
+        {/* Subtle grid lines for classroom feel */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+          backgroundSize: '60px 60px',
+        }} />
+
+        {/* Animated rings */}
+        {[...Array(3)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              width: 400 + i * 200, height: 400 + i * 200,
+              border: '1px solid rgba(255,255,255,0.04)',
+              bottom: '-20%', left: '50%', transform: 'translateX(-50%)',
+            }}
+            animate={{ scale: [1, 1.04, 1] }}
+            transition={{ repeat: Infinity, duration: 6 + i * 2 }}
+          />
+        ))}
+
+        {/* TOP — PIN Card + Start button */}
+        <div className="relative z-10 flex items-start justify-between p-5">
+          <motion.div
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+            className="bg-white rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-5"
+          >
+            <div>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Join at</p>
+              <p className="font-black text-gray-800">quizrush.app</p>
+              <p className="text-gray-400 text-xs mt-0.5">or with the <b>QuizRush!</b> app</p>
+            </div>
+            <div className="w-px h-14 bg-gray-200" />
+            <div>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Game PIN:</p>
+              <p className="text-5xl font-black text-gray-900 tracking-widest leading-none">
+                {roomCode?.match(/.{1,3}/g)?.join(' ')}
+              </p>
+            </div>
+            <div className="bg-white p-1.5 rounded-xl border border-gray-100 shadow-inner">
+              <QRCodeSVG value={joinUrl} size={72} />
+            </div>
+          </motion.div>
+
+          <motion.button
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, type: 'spring', stiffness: 200, damping: 20 }}
+            whileHover={{ scale: 1.05, boxShadow: '0 8px 30px rgba(0,0,0,0.3)' }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleStart}
+            disabled={players.length === 0}
+            className="flex items-center gap-3 bg-white text-gray-900 font-black text-xl px-8 py-4 rounded-2xl shadow-2xl disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          >
+            <span className="text-2xl">▶</span> Start
+          </motion.button>
+        </div>
+
+        {/* CENTER — Logo */}
+        <div className="relative z-10 flex flex-col items-center py-4">
+          <motion.h1
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.2 }}
+            className="text-6xl font-black text-white tracking-tight"
+            style={{
+              fontStyle: 'italic',
+              textShadow: '0 4px 20px rgba(0,0,0,0.4), 0 0 60px rgba(123,47,247,0.4)',
+            }}
+          >
+            QuizRush!
+          </motion.h1>
+        </div>
+
+        {/* PLAYERS grid */}
+        <div className="relative z-10 flex-1 flex flex-wrap justify-center content-start gap-4 px-6 pb-4">
+          <AnimatePresence>
+            {players.map(p => (
+              <motion.div
+                key={p.id || p.nickname}
+                initial={{ scale: 0, opacity: 0, y: 30 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+              >
+                <PlayerAvatar seed={p.avatarSeed || p.nickname} size={90} showName />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {players.length === 0 && (
+            <motion.div
+              className="flex flex-col items-center mt-12"
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            >
+              <div className="w-14 h-14 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4" />
+              <p className="text-white text-2xl font-black">Waiting for participants...</p>
+              <p className="text-white/50 mt-2">Share the PIN to let players join</p>
+            </motion.div>
+          )}
+        </div>
+
+        {/* BOTTOM bar */}
+        <div className="relative z-10 flex items-center justify-between px-6 py-3 text-white/40 text-sm">
+          <div className="flex items-center gap-2">
+            <span>👥</span>
+            <span className="text-white font-bold text-lg">{players.length}</span>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Room code + QR */}
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-3xl p-8">
-              <h2 className="text-xl font-bold text-[#0F172A] mb-6">Share This Code</h2>
-              <div className="bg-[#F7F8FC] rounded-2xl p-6 text-center mb-6">
-                <p className="text-gray-500 text-sm mb-2">Room Code</p>
-                <p className="text-5xl font-extrabold text-[#2563EB] tracking-widest mb-4">{roomCode?.toUpperCase()}</p>
-                <Button variant="outline" size="sm" onClick={handleCopy}>
-                  <Copy size={14} /> {copied ? 'Copied!' : 'Copy Code'}
-                </Button>
-              </div>
-              <div className="flex justify-center mb-4">
-                <div className="bg-white p-3 rounded-xl border-2 border-gray-100">
-                  <QRCode value={joinUrl} size={160} />
-                </div>
-              </div>
-              <p className="text-center text-sm text-gray-500">Or scan QR code to join</p>
-            </motion.div>
-
-            {/* Player list */}
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-3xl p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <Users size={20} className="text-[#2563EB]" />
-                  <h2 className="text-xl font-bold text-[#0F172A]">{players.length} Players</h2>
-                </div>
-                <div className="w-3 h-3 bg-[#10B981] rounded-full animate-pulse" />
-              </div>
-
-              <div className="overflow-y-auto max-h-64 mb-6">
-                <motion.div variants={staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 gap-3">
-                  {players.map(p => (
-                    <motion.div key={p.id || p.nickname} variants={staggerItem} className="flex items-center gap-2 bg-gray-50 rounded-xl p-3">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ backgroundColor: generateAvatar(p.nickname) }}>
-                        {p.nickname[0].toUpperCase()}
-                      </div>
-                      <span className="font-medium text-sm text-[#0F172A] truncate">{p.nickname}</span>
-                    </motion.div>
-                  ))}
-                </motion.div>
-                {players.length === 0 && (
-                  <div className="text-center text-gray-400 py-8">
-                    <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                    <p className="text-sm">Waiting for players...</p>
-                  </div>
-                )}
-              </div>
-
-              <Button size="lg" className="w-full" onClick={handleStart} disabled={players.length === 0}>
-                <Play size={20} /> Start Game
-              </Button>
-              {players.length === 0 && (
-                <p className="text-center text-xs text-gray-400 mt-2">Need at least 1 player to start</p>
-              )}
-            </motion.div>
+          <div className="flex gap-4 text-xl">
+            <span className="cursor-pointer hover:text-white/70 transition-colors">🔊</span>
+            <span className="cursor-pointer hover:text-white/70 transition-colors">⚙️</span>
+            <span className="cursor-pointer hover:text-white/70 transition-colors">⛶</span>
           </div>
         </div>
       </div>

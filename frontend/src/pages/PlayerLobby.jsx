@@ -1,85 +1,135 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { motion } from 'framer-motion'
-import { Users, Zap } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../store/gameStore'
-import { generateAvatar } from '../utils/helpers'
-import { staggerContainer, staggerItem } from '../animations/variants'
+import PlayerAvatar from '../components/PlayerAvatar'
+
+function getOrCreatePlayerId() {
+  let pid = sessionStorage.getItem('quizrush_player_id')
+  if (!pid) { pid = crypto.randomUUID(); sessionStorage.setItem('quizrush_player_id', pid) }
+  return pid
+}
 
 export default function PlayerLobby() {
   const { roomCode } = useParams()
   const navigate = useNavigate()
-  const { nickname, playerId, setPlayers, players, setGameStatus, setCurrentQuestion, setRoomCode } = useGameStore()
+  const { nickname, avatarSeed, setPlayers, players, setGameStatus, setCurrentQuestion, setRoomCode } = useGameStore()
+  const joinedRef = useRef(false)
 
   const handleMessage = useCallback((msg) => {
     switch (msg.event) {
-      case 'connected':
-        useGameStore.getState().setPlayer(msg.player_id, nickname)
-        break
-      case 'player_joined':
-        setPlayers(msg.data.players)
-        break
+      case 'player_joined': setPlayers(msg.data.players); break
       case 'game_started':
         setGameStatus('active')
         setCurrentQuestion(msg.data)
         navigate(`/game/${roomCode}`)
         break
     }
-  }, [navigate, nickname, roomCode, setPlayers, setGameStatus, setCurrentQuestion])
+  }, [navigate, roomCode, setPlayers, setGameStatus, setCurrentQuestion])
 
   const { send } = useWebSocket(handleMessage)
 
   useEffect(() => {
     if (!nickname) { navigate('/join'); return }
+    if (joinedRef.current) return
+    joinedRef.current = true
+    const pid = getOrCreatePlayerId()
     setRoomCode(roomCode)
-    send({ event: 'join_room', room_code: roomCode, nickname, player_id: playerId })
-  }, [send, roomCode, nickname, playerId, navigate, setRoomCode])
+    send({ event: 'join_room', room_code: roomCode, nickname, player_id: pid })
+  }, [send, roomCode, nickname, navigate, setRoomCode])
 
   return (
     <>
-      <Helmet>
-        <title>Waiting Room — QuizRush</title>
-      </Helmet>
-      <div className="min-h-screen bg-gradient-to-br from-[#2563EB] to-blue-800 flex flex-col items-center justify-center p-6">
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Zap size={32} className="text-white" />
-            <h1 className="text-4xl font-extrabold text-white">QuizRush</h1>
+      <Helmet><title>Waiting... — QuizRush</title></Helmet>
+      <div
+        className="min-h-screen flex flex-col relative overflow-hidden"
+        style={{ background: 'linear-gradient(160deg, #1a0a2e 0%, #3d1a6e 50%, #6b3fa0 100%)' }}
+      >
+        {/* Animated ring bg */}
+        {[...Array(4)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              width: 250 + i * 150, height: 250 + i * 150,
+              border: '1px solid rgba(255,255,255,0.05)',
+              top: '40%', left: '50%', transform: 'translate(-50%,-50%)',
+            }}
+            animate={{ scale: [1, 1.06, 1], rotate: i % 2 === 0 ? [0, 5, 0] : [0, -5, 0] }}
+            transition={{ repeat: Infinity, duration: 5 + i * 1.5 }}
+          />
+        ))}
+
+        {/* PIN at top */}
+        <motion.div
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 flex justify-center pt-8"
+        >
+          <div className="bg-white/10 backdrop-blur rounded-2xl px-8 py-3 text-center border border-white/20">
+            <p className="text-white/50 text-xs font-bold uppercase tracking-widest mb-1">Game PIN</p>
+            <p className="text-white font-black text-3xl tracking-widest">{roomCode}</p>
           </div>
-          <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-8 py-4 inline-block">
-            <p className="text-blue-100 text-sm font-medium mb-1">Room Code</p>
-            <p className="text-white text-4xl font-extrabold tracking-widest">{roomCode?.toUpperCase()}</p>
-          </div>
-          <p className="text-blue-200 mt-4 text-lg">Waiting for the host to start...</p>
         </motion.div>
 
-        <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl">
-          <div className="flex items-center gap-2 mb-5">
-            <Users size={20} className="text-[#2563EB]" />
-            <h2 className="text-lg font-bold text-[#0F172A]">{players.length} Players Joined</h2>
-          </div>
-          <motion.div variants={staggerContainer} initial="initial" animate="animate" className="grid grid-cols-2 gap-3">
-            {players.map((p) => (
-              <motion.div key={p.id || p.nickname} variants={staggerItem} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                  style={{ backgroundColor: generateAvatar(p.nickname) }}
-                >
-                  {p.nickname[0].toUpperCase()}
-                </div>
-                <span className="font-semibold text-[#0F172A] text-sm truncate">{p.nickname}</span>
-              </motion.div>
-            ))}
+        {/* My avatar — big center */}
+        <div className="relative z-10 flex flex-col items-center justify-center flex-1 py-8">
+          <motion.div
+            initial={{ scale: 0, rotate: -10 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.2 }}
+            className="mb-4"
+          >
+            <PlayerAvatar seed={avatarSeed || nickname} size={140} />
           </motion.div>
-          {players.length === 0 && (
-            <div className="text-center text-gray-400 py-6">
-              <div className="w-10 h-10 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-sm">Waiting for players to join...</p>
-            </div>
-          )}
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-white font-black text-3xl mb-2"
+          >
+            {nickname}
+          </motion.p>
+
+          <motion.p
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="text-white/60 text-base"
+          >
+            Waiting for the host to start...
+          </motion.p>
         </div>
+
+        {/* Players joined at bottom */}
+        {players.length > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 pb-8 px-4"
+          >
+            <p className="text-white/40 text-xs text-center mb-3 font-bold uppercase tracking-wider">
+              {players.length} players joined
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <AnimatePresence>
+                {players.map(p => (
+                  <motion.div
+                    key={p.id || p.nickname}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  >
+                    <PlayerAvatar seed={p.avatarSeed || p.nickname} size={48} showName />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
       </div>
     </>
   )

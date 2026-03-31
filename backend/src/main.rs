@@ -31,14 +31,21 @@ async fn main() -> anyhow::Result<()> {
 
     let rooms = game::new_room_store();
 
-    let frontend_url = config.frontend_url.clone();
-    let cors_origin = frontend_url
-        .parse::<axum::http::HeaderValue>()
-        .map_err(|e| anyhow::anyhow!("Invalid FRONTEND_URL: {}", e))?;
-    let cors = CorsLayer::new()
-        .allow_origin(cors_origin)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    let cors = {
+        let origins: Vec<axum::http::HeaderValue> = config.frontend_url
+            .split(',')
+            .map(|s| {
+                s.trim()
+                    .parse::<axum::http::HeaderValue>()
+                    .map_err(|e| anyhow::anyhow!("Invalid CORS origin '{}': {}", s, e))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+
+        CorsLayer::new()
+            .allow_origin(origins)
+            .allow_methods(Any)
+            .allow_headers(Any)
+    };
 
     let app = routes::create_router(pool, config.clone(), rooms)
         .layer(CompressionLayer::new())
