@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useGameStore } from '../store/gameStore'
 import PlayerAvatar from '../components/PlayerAvatar'
+import ThreeBackground from '../components/ThreeBackground'
 
 function getOrCreatePlayerId() {
   let pid = sessionStorage.getItem('quizrush_player_id')
@@ -15,7 +16,7 @@ function getOrCreatePlayerId() {
 export default function PlayerLobby() {
   const { roomCode } = useParams()
   const navigate = useNavigate()
-  const { nickname, avatarSeed, setPlayers, players, setGameStatus, setCurrentQuestion, setRoomCode } = useGameStore()
+  const { nickname, avatarSeed, setPlayers, players, setGameStatus, setCurrentQuestion, setRoomCode, setPlayer } = useGameStore()
   const joinedRef = useRef(false)
 
   const handleMessage = useCallback((msg) => {
@@ -37,8 +38,9 @@ export default function PlayerLobby() {
     joinedRef.current = true
     const pid = getOrCreatePlayerId()
     setRoomCode(roomCode)
+    setPlayer(pid, nickname)
     send({ event: 'join_room', room_code: roomCode, nickname, player_id: pid })
-  }, [send, roomCode, nickname, navigate, setRoomCode])
+  }, [send, roomCode, nickname, navigate, setRoomCode, setPlayer])
 
   return (
     <>
@@ -47,6 +49,7 @@ export default function PlayerLobby() {
         className="min-h-screen flex flex-col relative overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #1a0a2e 0%, #3d1a6e 50%, #6b3fa0 100%)' }}
       >
+        <ThreeBackground opacity={0.4} />
         {/* Animated ring bg */}
         {[...Array(4)].map((_, i) => (
           <motion.div

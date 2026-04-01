@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useAuthStore } from './store/authStore'
 
 const Landing = lazy(() => import('./pages/Landing'))
@@ -32,29 +33,53 @@ function ProtectedRoute({ children }) {
   return children
 }
 
+const pageTransition = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.28, ease: 'easeOut' } },
+  exit: { opacity: 0, y: -12, transition: { duration: 0.18 } },
+}
+
+function AnimatedPage({ children }) {
+  return (
+    <motion.div
+      variants={pageTransition}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      style={{ minHeight: '100dvh' }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
 export default function App() {
+  const location = useLocation()
+
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        {/* Public */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/join" element={<Join />} />
-        <Route path="/join/:roomCode" element={<Join />} />
-        <Route path="/lobby/:roomCode" element={<PlayerLobby />} />
-        <Route path="/game/:roomCode" element={<PlayerGame />} />
-        <Route path="/results/:roomCode" element={<PlayerResults />} />
-        {/* Auth */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        {/* Host Protected */}
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/quiz/new" element={<ProtectedRoute><QuizBuilder /></ProtectedRoute>} />
-        <Route path="/quiz/:id/edit" element={<ProtectedRoute><QuizBuilder /></ProtectedRoute>} />
-        <Route path="/host/lobby/:roomCode" element={<ProtectedRoute><GameLobby /></ProtectedRoute>} />
-        <Route path="/host/game/:roomCode" element={<ProtectedRoute><HostGame /></ProtectedRoute>} />
-        <Route path="/host/results/:gameId" element={<ProtectedRoute><HostResults /></ProtectedRoute>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <AnimatePresence mode="wait" initial={false}>
+        <Routes location={location} key={location.pathname}>
+          {/* Public */}
+          <Route path="/" element={<AnimatedPage><Landing /></AnimatedPage>} />
+          <Route path="/join" element={<AnimatedPage><Join /></AnimatedPage>} />
+          <Route path="/join/:roomCode" element={<AnimatedPage><Join /></AnimatedPage>} />
+          <Route path="/lobby/:roomCode" element={<AnimatedPage><PlayerLobby /></AnimatedPage>} />
+          <Route path="/game/:roomCode" element={<AnimatedPage><PlayerGame /></AnimatedPage>} />
+          <Route path="/results/:roomCode" element={<AnimatedPage><PlayerResults /></AnimatedPage>} />
+          {/* Auth */}
+          <Route path="/login" element={<AnimatedPage><Login /></AnimatedPage>} />
+          <Route path="/register" element={<AnimatedPage><Register /></AnimatedPage>} />
+          {/* Host Protected */}
+          <Route path="/dashboard" element={<ProtectedRoute><AnimatedPage><Dashboard /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/quiz/new" element={<ProtectedRoute><AnimatedPage><QuizBuilder /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/quiz/:id/edit" element={<ProtectedRoute><AnimatedPage><QuizBuilder /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/host/lobby/:roomCode" element={<ProtectedRoute><AnimatedPage><GameLobby /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/host/game/:roomCode" element={<ProtectedRoute><AnimatedPage><HostGame /></AnimatedPage></ProtectedRoute>} />
+          <Route path="/host/results/:gameId" element={<ProtectedRoute><AnimatedPage><HostResults /></AnimatedPage></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AnimatePresence>
     </Suspense>
   )
 }

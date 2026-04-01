@@ -180,7 +180,7 @@ export default function Landing() {
 
         {/* Footer */}
         <footer className="py-8 px-6 bg-[#0F172A] text-center">
-          <p className="text-gray-500 text-sm">© 2024 QuizRush. Free forever. Built with ❤️</p>
+          <p className="text-gray-500 text-sm">© {new Date().getFullYear()} QuizRush. Free forever. Built with ❤️</p>
         </footer>
       </div>
     </>
