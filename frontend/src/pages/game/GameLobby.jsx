@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'react-qr-code'
 import { useWebSocket } from '../../hooks/useWebSocket'
 import { useAuthStore } from '../../store/authStore'
 import PlayerAvatar from '../../components/PlayerAvatar'
+import ThreeBackground from '../../components/ThreeBackground'
 
 export default function GameLobby() {
   const { roomCode } = useParams()
@@ -38,6 +39,7 @@ export default function GameLobby() {
         className="min-h-screen relative overflow-hidden flex flex-col"
         style={{ background: 'linear-gradient(180deg, #1a0a2e 0%, #3d1a6e 40%, #6b3fa0 80%, #8b5fbf 100%)' }}
       >
+        <ThreeBackground opacity={0.3} />
         {/* Subtle grid lines for classroom feel */}
         <div className="absolute inset-0 opacity-5" style={{
           backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',

@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import AvatarPicker from '../components/AvatarPicker'
 import PlayerAvatar from '../components/PlayerAvatar'
-const { setNickname, setRoomCode, setAvatarSeed: saveAvatarSeed } = useGameStore()
+import ThreeBackground from '../components/ThreeBackground'
 
 export default function Join() {
   const { roomCode: paramCode } = useParams()
   const navigate = useNavigate()
-  const { setNickname, setRoomCode } = useGameStore()
+  const { setNickname, setRoomCode, setAvatarSeed: saveAvatarSeed } = useGameStore()
   const [pin, setPin] = useState(paramCode || '')
   const [name, setName] = useState('')
   const [step, setStep] = useState('pin')
@@ -56,6 +56,7 @@ const handleJoin = () => {
         className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #3d1a6e 0%, #7b2ff7 60%, #5c1a9e 100%)' }}
       >
+        <ThreeBackground />
         {/* Animated bg circles */}
         {[...Array(5)].map((_, i) => (
           <motion.div

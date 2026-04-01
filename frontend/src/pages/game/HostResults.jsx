@@ -7,6 +7,7 @@ import { gameApi } from '../../services/api'
 import { exportToCsv } from '../../utils/helpers'
 import { staggerContainer, staggerItem } from '../../animations/variants'
 import PlayerAvatar from '../../components/PlayerAvatar'
+import ThreeBackground from '../../components/ThreeBackground'
 import confetti from 'canvas-confetti'
 
 const PODIUM_ORDER = [1, 0, 2]
@@ -57,6 +58,7 @@ export default function HostResults() {
         className="min-h-screen flex flex-col relative overflow-hidden"
         style={{ background: 'linear-gradient(180deg, #1a0a2e 0%, #3d1a6e 50%, #6b3fa0 100%)' }}
       >
+        <ThreeBackground opacity={0.3} />
         {/* Confetti bits */}
         {phase === 'podium' && [...Array(16)].map((_, i) => (
           <motion.div

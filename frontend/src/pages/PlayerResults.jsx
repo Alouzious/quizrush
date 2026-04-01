@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import PlayerAvatar from '../components/PlayerAvatar'
+import ThreeBackground from '../components/ThreeBackground'
 import confetti from 'canvas-confetti'
 import { staggerContainer, staggerItem } from '../animations/variants'
 
@@ -16,11 +17,13 @@ export default function PlayerResults() {
   const myRank = leaderboard.findIndex(p => p.nickname === nickname) + 1
 
   useEffect(() => {
+    // Redirect if missing session state (e.g. page refresh)
+    if (!nickname) { navigate('/join', { replace: true }); return }
     if (myRank === 1) {
       confetti({ particleCount: 250, spread: 140, origin: { y: 0.3 }, colors: ['#ffd700','#7b2ff7','#e21b3c','#26890c'] })
       setTimeout(() => confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } }), 600)
     }
-  }, [myRank])
+  }, [myRank, nickname, navigate])
 
   return (
     <>
@@ -29,6 +32,7 @@ export default function PlayerResults() {
         className="min-h-screen flex flex-col relative overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #1a0a2e 0%, #3d1a6e 60%, #6b3fa0 100%)' }}
       >
+        <ThreeBackground opacity={0.35} />
         {/* Confetti bg dots */}
         {myRank === 1 && [...Array(12)].map((_, i) => (
           <motion.div

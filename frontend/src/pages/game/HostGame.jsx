@@ -54,7 +54,7 @@ export default function HostGame() {
         setPlayerCount(msg.data.players?.length || 0)
         break
       case 'game_ended':
-        navigate(`/host/results/${gameId}`)
+        navigate(`/host/results/${gameId || roomCode}`)
         break
     }
   }, [navigate, gameId, start])

@@ -7,6 +7,7 @@ import { useTimer } from '../hooks/useTimer'
 import { useGameStore } from '../store/gameStore'
 import { shakeVariant } from '../animations/variants'
 import PlayerAvatar from '../components/PlayerAvatar'
+import ThreeBackground from '../components/ThreeBackground'
 import confetti from 'canvas-confetti'
 
 const ANSWERS = [
@@ -19,7 +20,7 @@ const ANSWERS = [
 export default function PlayerGame() {
   const { roomCode } = useParams()
   const navigate = useNavigate()
-  const { nickname, avatarSeed, currentQuestion, setCurrentQuestion, setLeaderboard, setGameStatus, score, setScore } = useGameStore()
+  const { nickname, avatarSeed, currentQuestion, setCurrentQuestion, setLeaderboard, setGameStatus, score, setScore, playerId } = useGameStore()
   const [selectedAnswer, setSelectedAnswer] = useState(null)
   const [answerResult, setAnswerResult] = useState(null)
   const [questionNum, setQuestionNum] = useState(1)
@@ -62,7 +63,8 @@ export default function PlayerGame() {
   const handleAnswer = (answerId) => {
     if (selectedAnswer || answerResult) return
     setSelectedAnswer(answerId)
-    send({ event: 'submit_answer', question_id: currentQuestion?.question?.id, answer_id: answerId })
+    const pid = playerId || sessionStorage.getItem('quizrush_player_id') || undefined
+    send({ event: 'submit_answer', question_id: currentQuestion?.question?.id, answer_id: answerId, room_code: roomCode, player_id: pid })
   }
 
   const question = currentQuestion?.question
@@ -72,20 +74,21 @@ export default function PlayerGame() {
   // Waiting screen
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center"
+      <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #1a0a2e 0%, #3d1a6e 100%)' }}>
+        <ThreeBackground opacity={0.4} />
         <motion.div
           animate={{ y: [0, -12, 0] }}
           transition={{ repeat: Infinity, duration: 2 }}
-          className="mb-6"
+          className="mb-6 relative z-10"
         >
           <PlayerAvatar seed={avatarSeed || nickname} size={120} />
         </motion.div>
-        <p className="text-white font-black text-2xl mb-2">{nickname}</p>
+        <p className="text-white font-black text-2xl mb-2 relative z-10">{nickname}</p>
         <motion.p
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ repeat: Infinity, duration: 1.8 }}
-          className="text-white/60 text-lg"
+          className="text-white/60 text-lg relative z-10"
         >
           Get ready...
         </motion.p>
@@ -104,8 +107,9 @@ export default function PlayerGame() {
           ? 'linear-gradient(160deg, #0f4d08, #26890c)'
           : 'linear-gradient(160deg, #1a0a2e, #3d1a6e)' }}
       >
+        <ThreeBackground opacity={0.3} />
         {/* Top bar */}
-        <div className="flex items-center justify-between p-5">
+        <div className="relative z-10 flex items-center justify-between p-5">
           <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-black text-lg">
             {questionNum}
           </div>
@@ -120,7 +124,7 @@ export default function PlayerGame() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6">
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">
           {answerResult.correct ? (
             <motion.div
               initial={{ scale: 0, rotate: -10 }}
@@ -193,11 +197,12 @@ export default function PlayerGame() {
     <>
       <Helmet><title>Playing — QuizRush</title></Helmet>
       <div
-        className="min-h-screen flex flex-col"
+        className="min-h-screen flex flex-col relative overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #1a0a2e 0%, #3d1a6e 60%, #6b3fa0 100%)' }}
       >
+        <ThreeBackground opacity={0.3} />
         {/* Top bar */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-2">
+        <div className="relative z-10 flex items-center justify-between px-5 pt-5 pb-2">
           <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-black text-lg">
             {questionNum}
           </div>
@@ -213,7 +218,7 @@ export default function PlayerGame() {
         </div>
 
         {/* Timer progress bar */}
-        <div className="h-1.5 mx-5 rounded-full bg-white/10 overflow-hidden">
+        <div className="relative z-10 h-1.5 mx-5 rounded-full bg-white/10 overflow-hidden">
           <motion.div
             className="h-full rounded-full"
             style={{ background: timeLeft <= 5 ? '#e21b3c' : 'linear-gradient(90deg, #7b2ff7, #e21b3c)' }}
@@ -223,7 +228,7 @@ export default function PlayerGame() {
         </div>
 
         {/* Timer circle */}
-        <div className="flex justify-center py-5">
+        <div className="relative z-10 flex justify-center py-5">
           <motion.div
             animate={timeLeft <= 5 ? { scale: [1, 1.15, 1] } : { scale: 1 }}
             transition={{ repeat: timeLeft <= 5 ? Infinity : 0, duration: 0.4 }}
@@ -235,7 +240,7 @@ export default function PlayerGame() {
         </div>
 
         {/* 2x2 Answer buttons */}
-        <div className="flex-1 grid grid-cols-2 gap-3 px-3 pb-4">
+        <div className="relative z-10 flex-1 grid grid-cols-2 gap-3 px-3 pb-4">
           {question?.answers?.map((answer, idx) => {
             const style = ANSWERS[idx] || ANSWERS[0]
             const isSelected = selectedAnswer === answer.id
