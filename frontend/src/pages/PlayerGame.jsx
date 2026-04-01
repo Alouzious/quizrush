@@ -20,7 +20,7 @@ const ANSWERS = [
 export default function PlayerGame() {
   const { roomCode } = useParams()
   const navigate = useNavigate()
-  const { nickname, avatarSeed, currentQuestion, setCurrentQuestion, setLeaderboard, setGameStatus, score, setScore } = useGameStore()
+  const { nickname, avatarSeed, currentQuestion, setCurrentQuestion, setLeaderboard, setGameStatus, score, setScore, playerId } = useGameStore()
   const [selectedAnswer, setSelectedAnswer] = useState(null)
   const [answerResult, setAnswerResult] = useState(null)
   const [questionNum, setQuestionNum] = useState(1)
@@ -63,7 +63,7 @@ export default function PlayerGame() {
   const handleAnswer = (answerId) => {
     if (selectedAnswer || answerResult) return
     setSelectedAnswer(answerId)
-    const pid = sessionStorage.getItem('quizrush_player_id')
+    const pid = playerId || sessionStorage.getItem('quizrush_player_id') || undefined
     send({ event: 'submit_answer', question_id: currentQuestion?.question?.id, answer_id: answerId, room_code: roomCode, player_id: pid })
   }
 
